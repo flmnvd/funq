@@ -6,5 +6,6 @@ API of funq (client side)
 
    user_api/testcase
    user_api/applicationconfig
+   user_api/object_lookup
    user_api/funqclient
    user_api/widgets_models
