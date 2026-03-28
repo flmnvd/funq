@@ -1,38 +1,38 @@
-Architecture du serveur Funq
-============================
+Funq Server Architecture
+========================
 
-Les sources du serveur sont placées dans le dossier cpp.
+The server sources are located in the `cpp` folder.
 
-Arborescence des fichiers:
---------------------------
+File tree
+---------
 
-* **server/funq.pro**: Fichier de construction général qmake
-* **server/player_tester/**: application exemple, pour tester manuellement le framework
-* **server/tests/**: dossier de tests unitaires
-* **server/protocole/**: répertoire pour la couche protocolaire
-* **server/libFunq/**: répertoire pour la librairie libFunq
-* **server/funq/**: répertoire pour l'exécutable funq (injection de code libFunq dans une appli)
+* **server/funq.pro**: main qmake build file
+* **server/player_tester/**: example application used for manual framework testing
+* **server/tests/**: unit test directory
+* **server/protocole/**: protocol layer directory
+* **server/libFunq/**: `libFunq` library directory
+* **server/funq/**: `funq` executable directory (injects `libFunq` into an application)
 
-Ajout de fonctionnalités (commandes possibles depuis un client)
----------------------------------------------------------------
+Adding features (commands available from a client)
+--------------------------------------------------
 
-Le fichier le plus important est le fichier **server/libFunq/player.h**, avec la définition
-de la classe **Player**.
+The most important file is **server/libFunq/player.h**, which contains the
+definition of the **Player** class.
 
-Les slots publics définis à l'intérieur de cette classe seront automatiquement appelés
-par un **client qui envoie une commande de même nom que le slot**.
+The public slots defined in this class are automatically callable by a
+**client that sends a command with the same name as the slot**.
 
-Une **commande** client est un objet json (le format brut est défini ici:
-:ref:`trames-echanges`) qui possède au moins une clé nommée **"action"**
-dont **la valeur est le nom de la commande**.
+A client **command** is a JSON object (its raw format is defined here:
+:ref:`trames-echanges`) that contains at least one key named **"action"**
+whose **value is the command name**.
 
-Par exemple, voici l'implémentation de la commande **quit** (qui permet de quitter
-la QApplication), coté c++:
+For example, here is the implementation of the **quit** command (which exits
+the `QApplication`) on the C++ side.
 
 player.h:
 
 .. code-block:: cpp
-  
+
   public slots:
     ...
     QtJson::JsonObject quit(const QtJson::JsonObject & command);
@@ -40,7 +40,7 @@ player.h:
 player.cpp:
 
 .. code-block:: cpp
-  
+
   QtJson::JsonObject Player::quit(const QtJson::JsonObject &) {
       if (qApp) {
           qApp->exit();
@@ -49,30 +49,31 @@ player.cpp:
       return result;
   }
 
-pour déclencher cette commande côté client, on devra donc envoyer par le réseau
-l'objet json suivant, (ici sans l'entête de trame définie ici :ref:`trames-echanges`):
+To trigger this command from the client side, the following JSON object must be
+sent over the network (here without the frame header defined in
+:ref:`trames-echanges`):
 
 .. code-block:: python
-  
+
   {"action": "quit"}
 
-Et la réponse du serveur sera un objet json vide.
+And the server response will be an empty JSON object.
 
 .. note::
-  
-  Il faut bien retenir que côté serveur, l'ajout d'un slot avec la bonne signature
-  rajoute une commande, simplement.
+
+  The important point to remember is that on the server side, adding a slot
+  with the proper signature automatically adds a command.
 
 .. note::
-  
-  Les fichier **server/libFunq/player.h** et **server/libFunq/player.cpp** sont une bonne
-  base pour apprendre comment ajouter des commandes et les implémenter.
 
-Contenu du fichier *server/libFunq/player.h*
---------------------------------------------
+  The files **server/libFunq/player.h** and **server/libFunq/player.cpp** are a
+  good starting point for learning how to add and implement commands.
 
-Voici le contenu du fichier player.h. Pour bien comprendre, regarder les sources
-complètes dans **server/libFunq**.
+Contents of the *server/libFunq/player.h* file
+----------------------------------------------
+
+Below is the content of `player.h`. For a full understanding, refer to the
+complete sources in **server/libFunq**.
 
 .. literalinclude:: ../server/libFunq/player.h
   :language: cpp

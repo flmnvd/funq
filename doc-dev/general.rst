@@ -1,101 +1,102 @@
-Vue d'ensemble du fonctionnement de Funq
-========================================
+Funq Overview
+=============
 
-Fonctionnement client/serveur
------------------------------
+Client/server operation
+-----------------------
 
-Funq fonctionne en mode **client/server**, via le protocole TCP:
+Funq works in **client/server** mode over TCP:
 
-* le serveur est contenu par l'application à tester
-* le client permet de manipuler l'application en effectuant des requêtes
+* the server is embedded in the application under test
+* the client manipulates the application by sending requests
 
 .. _trames-echanges:
 
-Trames d'échanges
------------------
-
-Les trames échangées contiennent du texte simple, du json.
-
-L'entête de trame contient la taille du message (au format texte), suivi
-d'un retour à la ligne **\\n**, suivi du message.
-
-Voici un message valide par exemple::
-  
-  26\n{"action": "widgets_list"}
-
-Choix d'implémentation - partie serveur
----------------------------------------
-
-La partie serveur est écrite en C++, avec le framework QT (comme les cibles des
-applications à tester sont en QT). Il est possible d'injecter du code dans une
-application déjà existante via **funq** ou de compiler son application avec **libFunq**
-pour intégrer le serveur dans une application.
-
-.. note::
-  
-  Actuellement, l'injection de code sous Windows est fonctionnelle, mais
-  incomplète. Par exemple, tester une application construite en DEBUG nécessite
-  libFunq compilé et installé en DEBUG. l'exécutable **funq** (serveur) pourrait
-  prendre automatiquement la décision si l'installation fournissait les versions DEBUG
-  et RELEASE (TODO).
-  
-  Aussi, le script server/setup.py ne gère pour l'instant que la compil avec
-  mingw-32. (TODO)
-
-Choix d'implémentation - partie client
---------------------------------------
-
-Le client est implémenté en Python - et c'est ainsi que les tests doivent être écrits.
-
-Pour lancer les tests, la librairie **nosetests** est utilisée - c'est une
-dépendance du client.
-
-Tests unitaires
+Exchange frames
 ---------------
 
-Les tests unitaires sont **très importants pour assurer qu'une correction ou**
-**un ajout de fonctionnalité n'entrainent pas de régression et que le système**
-**continue de bien fonctionner**.
+The exchanged frames contain plain text in JSON format.
 
-Il est donc indispensable de les **relancer après chaque modification**, **et de les enrichir**.
+The frame header contains the message size as text, followed by a newline
+character **\\n**, followed by the message itself.
 
-Le Jenkins de SCLE possède normalement des builds pour cela. La procédure manuelle
-est indiquée ci-dessous.
+For example, this is a valid message::
 
-Pour la partie serveur:
+  26\n{"action": "widgets_list"}
+
+Implementation choices - server side
+------------------------------------
+
+The server side is written in C++ with the Qt framework, because the target
+applications under test are also based on Qt. It is possible either to inject
+code into an already running application with **funq**, or to compile the
+application with **libFunq** to embed the server directly into it.
+
+.. note::
+
+  At the moment, code injection on Windows works but is still incomplete. For
+  example, testing an application built in DEBUG mode requires **libFunq** to
+  be built and installed in DEBUG mode as well. The **funq** executable
+  (server-side tool) could choose automatically if both DEBUG and RELEASE
+  versions were installed. (TODO)
+
+  Also, the `server/setup.py` script currently supports building only with
+  `mingw-32`. (TODO)
+
+Implementation choices - client side
+------------------------------------
+
+The client is implemented in Python, and tests should therefore be written in
+Python as well.
+
+To run the tests, the **nosetests** library is used. It is a client-side
+dependency.
+
+Unit tests
+----------
+
+Unit tests are **very important to ensure that fixes or new features do not**
+**introduce regressions and that the system continues to behave correctly**.
+
+They must therefore be **run again after every change**, **and extended when
+needed**.
+
+SCLE Jenkins should normally provide builds for this. The manual procedure is
+described below.
+
+For the server side:
 
 .. code-block:: bash
-  
+
   cd server/tests
   qmake && make && make check
 
 .. note::
-  
-  il est aussi possible de lancer les tests avec couverture de code (Linux):
-  
+
+  It is also possible to run the tests with code coverage on Linux:
+
   .. code-block:: bash
-    
+
     cd server
     ./run_tests_lcov.sh && firefox test-lcov-html/index.html
 
-Pour la partie client:
+For the client side:
 
 .. code-block:: bash
-  
+
   cd client
   nosetests
 
 .. note::
-  
-  Pour lancer avec la couverture lancer:
-  
+
+  To run with coverage:
+
   .. code-block:: bash
-    
+
     cd client
     nosetests --with-coverage --cover-package funq
 
-La partie client requiert le framework Python **nose** [1] pour lancer les tests,
-et **coverage.py** [2] pour la couverture.
+The client side requires the Python **nose** framework [1] to run tests, and
+**coverage.py** [2] for coverage.
 
 * [1] https://nose.readthedocs.org/en/latest/
 * [2] http://nedbatchelder.com/code/coverage/
@@ -103,26 +104,26 @@ et **coverage.py** [2] pour la couverture.
 Documentation
 -------------
 
-La documentation joue aussi une part très importante puisqu'elle permet **aux**
-**personnes de pouvoir utiliser les outils de manière autonome**.
+Documentation is also very important because it allows **people to use the
+tools independently**.
 
-C'est surtout nécessaire pour la documentation client, **qui est l'aide pour les**
-**personnes qui écrivent du code de test basé sur ce framework**.
+This is especially necessary for the client documentation, **which serves as
+guidance for people writing test code based on this framework**.
 
-Toute la documentation du projet est écrite en rst [1] avec l'outil sphinx [2].
-Pour générer ce genre de documentation, il faut se placer dans le dossier de doc
-(contenant un Makefile, make.bat et index.rst au minimum) et taper la commande
-suivante (exemple sous GNU/Linux pour du html):
+All project documentation is written in reStructuredText [1] with Sphinx [2].
+To generate this type of documentation, go to the documentation directory
+(containing at least a `Makefile`, `make.bat`, and `index.rst`) and run the
+following command, for example on GNU/Linux to generate HTML:
 
 .. code-block:: bash
-  
+
   make html
   firefox _build/html/index.html
 
 .. note::
-  
-  Il est très important de **compléter** la documentation dès qu'elle devient obsolète
-  ou qu'il y a des ajouts de fonctionnalité.
+
+  It is very important to **update** the documentation as soon as it becomes
+  outdated or when new features are added.
 
 * [1] http://docutils.sourceforge.net/rst.html
 * [2] http://sphinx-doc.org/

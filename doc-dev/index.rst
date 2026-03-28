@@ -1,30 +1,29 @@
-.. Documentation de développement sur le framework Funq (test_ihm_qt) documentation master file, created by
+.. Funq framework developer documentation master file, created by
    sphinx-quickstart on Wed May 21 16:49:28 2014.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Documentation de développement sur le framework Funq (test_ihm_qt) documentation
-================================================================================
+Funq Framework Developer Documentation
+======================================
 
-Cette documentation fournit de l'aide sur le développement du framework de test
-**funq**, aussi connu sous le nom de *test_ihm_qt* dans l'entreprise **INEO SCLE**.
+This documentation provides help for developing the **funq** test framework,
+also known internally at **INEO SCLE** as *test_ihm_qt*.
 
-Le développement des tests grâce à ce framework fait partie d'une **autre documentation**,
-disponible dans le dossier **client/doc**. Ici, il est décrit les rouages du framework
-pour aider à sa compréhension et dans le but de le maintenir ou d'ajouter de
-nouvelles fonctionnalités.
+Documentation about writing tests with this framework is part of **another
+documentation set**, available in the **client/doc** folder. This documentation
+describes the framework internals to help understand, maintain, or extend it
+with new features.
 
-Contenu:
+Contents:
 
 .. toctree::
    :maxdepth: 2
-   
+
    general
    server
 
 
-Recherche:
-==========
+Search
+======
 
 * :ref:`search`
-
