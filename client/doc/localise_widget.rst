@@ -55,6 +55,22 @@ Here is an example of output when clicking on the "File" menu in qtcreator::
   	defaultUp: false
   	nativeMenuBar: false
 
+In object paths, ``::`` is the separator between QObject path components. If a
+real Qt object name itself contains ``::``, Funq escapes it as ``:_:`` inside
+the path.
+
+For example::
+
+  Core:_:Internal:_:MainWindow-0::QtCreator.MenuBar
+
+means:
+
+* top-level object name: ``Core::Internal::MainWindow-0``
+* child object name: ``QtCreator.MenuBar``
+
+So ``:_:`` inside one path component means a literal ``::`` in the original
+QObject name, not another path level.
+
 Xml dump of all widgets
 -----------------------
 
