@@ -38,8 +38,10 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 #include "jsonclient.h"
 
 #include <QModelIndex>
+#include <QString>
 #include <QWidget>
 class DelayedResponse;
+class Pick;
 class QAbstractItemView;
 class QQuickItem;
 class QQuickWindow;
@@ -58,6 +60,7 @@ public:
 
     qulonglong registerObject(QObject * object);
     QObject * registeredObject(const qulonglong & id);
+    void sendPickMessage(const QString & text);
 
 public slots:
     /*
@@ -107,6 +110,7 @@ public slots:
     QtJson::JsonObject headerview_path_from_view(
         const QtJson::JsonObject & command);
     QtJson::JsonObject grab_graphics_view(const QtJson::JsonObject & command);
+    QtJson::JsonObject pick_start(const QtJson::JsonObject & command);
 
     QtJson::JsonObject quit(const QtJson::JsonObject & command);
 
@@ -130,6 +134,7 @@ private slots:
 
 private:
     QHash<qulonglong, QObject *> m_registeredObjects;
+    Pick * m_pick;
 };
 
 /**

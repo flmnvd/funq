@@ -36,6 +36,8 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 
 #include "dragndropresponse.h"
 #include "objectpath.h"
+#include "pick.h"
+#include "protocole.h"
 #include "shortcutresponse.h"
 
 #include <QAbstractItemModel>
@@ -51,10 +53,12 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 #include <QMouseEvent>
 #include <QStringList>
 #include <QTableView>
+#include <QTextStream>
 #include <QTime>
 #include <QTimer>
 #include <QTreeView>
 #include <QWidget>
+#include <QGuiApplication>
 #include <QWindow>
 
 #if QT_VERSION_MAJOR >= 6
@@ -69,6 +73,16 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 #endif
 
 using namespace ObjectPath;
+
+namespace {
+QString metaMethodSignature(const QMetaMethod & method) {
+#if QT_VERSION >= 0x050000
+    return QString::fromLatin1(method.methodSignature());
+#else
+    return QString::fromLatin1(method.signature());
+#endif
+}
+}
 
 template <class T>
 void mouse_click(T * w, const QPoint & pos, Qt::MouseButton button) {
@@ -241,8 +255,54 @@ void dump_graphics_items(const QList<QGraphicsItem *> & items,
     out["items"] = outitems;
 }
 
+void write_object_props(QObject * object, QTextStream & stream) {
+    for (int i = 0; i < object->metaObject()->propertyCount(); ++i) {
+        QMetaProperty property = object->metaObject()->property(i);
+        QString strValue = property.read(object).toString();
+        if (!strValue.isEmpty()) {
+            stream << "\t" << property.name() << ": " << strValue << '\n';
+        }
+    }
+}
+
+class RemotePickHandler : public PickHandler {
+public:
+    explicit RemotePickHandler(Player * player)
+        : m_player(player) {
+    }
+
+    virtual void handle(QObject * object, const QPoint & pos) {
+        QString text;
+        QTextStream stream(&text);
+        QString path = QString("WIDGET: `%1` (pos: %2, %3)")
+                           .arg(ObjectPath::objectPath(object))
+                           .arg(pos.x())
+                           .arg(pos.y());
+        stream << path << '\n';
+        write_object_props(object, stream);
+
+        QGraphicsView * view = dynamic_cast<QGraphicsView *>(object->parent());
+        if (view) {
+            QGraphicsItem * item = view->itemAt(pos);
+            QObject * qitem = dynamic_cast<QObject *>(item);
+            if (item) {
+                stream << "GITEM: `" << ObjectPath::graphicsItemId(item)
+                       << "` (QObject: " << (qitem != 0) << ")" << '\n';
+                if (qitem) {
+                    write_object_props(qitem, stream);
+                }
+            }
+        }
+
+        m_player->sendPickMessage(text);
+    }
+
+private:
+    Player * m_player;
+};
+
 Player::Player(QIODevice * device, QObject * parent)
-    : JsonClient(device, parent) {
+    : JsonClient(device, parent), m_pick(0) {
 }
 
 qulonglong Player::registerObject(QObject * object) {
@@ -274,8 +334,7 @@ QtJson::JsonObject Player::list_commands(const QtJson::JsonObject &) {
          ++i) {
         QMetaMethod method = metaObject->method(i);
         if (method.methodType() == QMetaMethod::Slot) {
-            methods << QString::fromLatin1(
-                metaObject->method(i).methodSignature());
+            methods << metaMethodSignature(method);
         }
     }
     QtJson::JsonObject result;
@@ -488,12 +547,42 @@ QtJson::JsonObject Player::widgets_list(const QtJson::JsonObject & command) {
     return result;
 }
 
+QtJson::JsonObject Player::pick_start(const QtJson::JsonObject &) {
+    QtJson::JsonObject result;
+    if (!qApp) {
+        return createError("NoApplication", "No QApplication instance found.");
+    }
+
+    if (!m_pick) {
+        m_pick = new Pick(new RemotePickHandler(this), this);
+        qApp->installEventFilter(m_pick);
+    }
+
+    result["success"] = true;
+    result["mode"] = "pick";
+    result["active"] = true;
+    result["message"] = "Pick mode is active. Use Ctrl+Shift+click.";
+    return result;
+}
+
 QtJson::JsonObject Player::quit(const QtJson::JsonObject &) {
     if (qApp) {
         qApp->exit();
     }
     QtJson::JsonObject result;
     return result;
+}
+
+void Player::sendPickMessage(const QString & text) {
+    QtJson::JsonObject message;
+    message["event"] = "pick";
+    message["text"] = text;
+
+    bool success = false;
+    QByteArray response = QtJson::serialize(message, success);
+    if (success) {
+        protocole()->sendMessage(response);
+    }
 }
 
 QtJson::JsonObject Player::actions_list(const QtJson::JsonObject & command) {

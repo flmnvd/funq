@@ -40,6 +40,16 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 #include <QDebug>
 #include <QMetaMethod>
 
+namespace {
+QString metaMethodSignature(const QMetaMethod & method) {
+#if QT_VERSION >= 0x050000
+    return QString::fromLatin1(method.methodSignature());
+#else
+    return QString::fromLatin1(method.signature());
+#endif
+}
+}
+
 JsonClient::JsonClient(QIODevice * device, QObject * parent)
     : QObject(parent), m_protocole(new Protocole(this)) {
     m_protocole->setDevice(device);
@@ -76,7 +86,7 @@ void JsonClient::onMessageReceived() {
     for (int i = metaObject()->methodOffset(); i < metaObject()->methodCount();
          ++i) {
         method = metaObject()->method(i);
-        QString signature = method.methodSignature();
+        QString signature = metaMethodSignature(method);
         if (signature.startsWith(action) &&
             signature.at(action.length()) == '(') {
             success = true;

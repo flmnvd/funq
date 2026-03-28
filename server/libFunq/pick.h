@@ -63,6 +63,7 @@ public:
     explicit Pick(PickHandler * handler = 0, QObject * parent = 0);
     virtual ~Pick();
 
+    virtual bool eventFilter(QObject * receiver, QEvent * event);
     virtual bool handleEvent(QObject * receiver, QEvent * event);
 
 private:

@@ -36,10 +36,12 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 
 #include "objectpath.h"
 
+#include <QApplication>
 #include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QMetaProperty>
 #include <QMouseEvent>
+#include <QWidget>
 
 Pick::Pick(PickHandler * handler, QObject * parent)
     : QObject(parent), m_handler(handler) {
@@ -51,6 +53,10 @@ Pick::~Pick() {
     }
 }
 
+bool Pick::eventFilter(QObject * receiver, QEvent * event) {
+    return handleEvent(receiver, event);
+}
+
 bool Pick::handleEvent(QObject * receiver, QEvent * event) {
     if (!m_handler) {
         return false;
@@ -59,7 +65,24 @@ bool Pick::handleEvent(QObject * receiver, QEvent * event) {
         QMouseEvent * evt = static_cast<QMouseEvent *>(event);
         if (evt->modifiers() & Qt::ShiftModifier &&
             evt->modifiers() & Qt::ControlModifier) {
-            m_handler->handle(receiver, evt->pos());
+            QObject * target = receiver;
+            QPoint pos = evt->pos();
+            QPoint globalPos = evt->globalPos();
+            QWidget * widget = qobject_cast<QWidget *>(receiver);
+            if (widget) {
+                QPoint globalPos = widget->mapToGlobal(pos);
+                if (QWidget * deepest = QApplication::widgetAt(globalPos)) {
+                    target = deepest;
+                    pos = deepest->mapFromGlobal(globalPos);
+                }
+            }
+
+            if (QWidget * deepest = QApplication::widgetAt(globalPos)) {
+                target = deepest;
+                pos = deepest->mapFromGlobal(globalPos);
+            }
+
+            m_handler->handle(target, pos);
             return true;
         }
     }

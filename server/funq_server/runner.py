@@ -37,6 +37,8 @@ import sys
 import subprocess
 import platform
 import argparse
+import socket
+import json
 import funq_server
 
 
@@ -97,8 +99,65 @@ class Runner():
             from funq_server.runner_linux import LinuxRunnerInjector as RI
         return RI
 
+    def _raw_send(self, fileobj, action, kwargs=None):
+        if kwargs is None:
+            kwargs = {}
+        payload = dict(kwargs)
+        payload['action'] = action
+        rawdata = json.dumps(payload).encode('utf-8')
+        header = f'{len(rawdata)}\n'.encode('utf-8')
+        fileobj.write(header + rawdata)
+        fileobj.flush()
+
+    def _read_response(self, fileobj):
+        header = fileobj.readline()
+        if not header:
+            raise RuntimeError('Connection closed by Funq server.')
+        size = int(header)
+        payload = fileobj.read(size)
+        if len(payload) != size:
+            raise RuntimeError('Incomplete response from Funq server.')
+        return json.loads(payload.decode('utf-8'))
+
+    def _run_remote_pick(self, host, port):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((host, port))
+        fileobj = sock.makefile(mode='rwb')
+        try:
+            self._raw_send(fileobj, 'pick_start')
+            response = self._read_response(fileobj)
+            if response.get('success') is False:
+                raise RuntimeError(
+                    f"{response.get('errName')}: {response.get('errDesc')}"
+                )
+            message = response.get('message')
+            if message:
+                print(message)
+            while True:
+                event = self._read_response(fileobj)
+                if event.get('event') == 'pick':
+                    text = event.get('text')
+                    if text:
+                        print(text, end='' if text.endswith('\n') else '\n')
+                else:
+                    print(json.dumps(event, sort_keys=True))
+        except KeyboardInterrupt:
+            return 0
+        finally:
+            try:
+                fileobj.close()
+            finally:
+                sock.close()
+
     def run(self, argv=None):
         opts = self._parse_args(argv)
+        if opts.pick and not opts.command:
+            host = opts.host or 'localhost'
+            port = opts.port or 9999
+            return self._run_remote_pick(host, port)
+        if not opts.command:
+            raise RuntimeError("No application command specified.")
+
         env = dict(os.environ)
 
         if opts.pick:
