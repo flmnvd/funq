@@ -69,3 +69,27 @@ only be used in a test::
       def test_my_first_test(self):
           # this will write a "dump.json" file
           self.funq.dump_widgets_list('dump.json')
+
+Lookup by property
+------------------
+
+You can also retrieve a QObject directly by one of its properties instead of
+using a full QObject path.
+
+For example, to find a button by its displayed text::
+
+  ok_button = self.funq.widget(property_name='text', property_value='OK')
+  ok_button.click()
+
+For a generic QObject, use :meth:`funq.client.FunqClient.object`::
+
+  label = self.funq.object(property_name='objectName',
+                           property_value='statusLabel')
+  self.assertEqual(label.properties()['text'], 'Ready')
+
+Property-based lookup must match exactly one object:
+
+* no match: ``ObjectNotFound``
+* more than one match: ``AmbiguousObjectMatch``
+
+In both cases, Funq raises an exception and the test fails.

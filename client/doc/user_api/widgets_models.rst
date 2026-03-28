@@ -6,6 +6,18 @@ Widgets and other classes to interact with tested application
 The Object base class
 ---------------------
 
+An object may now be retrieved either by its full QObject path or by one of
+its properties.
+
+Property-based lookup must identify exactly one object. If nothing matches,
+Funq raises ``ObjectNotFound``. If several objects match, Funq raises
+``AmbiguousObjectMatch``.
+
+Examples::
+
+  my_object = self.funq.object(path='mainWindow::statusBar::QLabel')
+  ok_button = self.funq.object(property_name='text', property_value='OK')
+
 .. autoclass:: Object
 
   .. automethod:: Object.properties
@@ -27,6 +39,8 @@ An Action is often obtained with :meth:`funq.client.FunqClient.action` .
 Example::
 
   my_action = self.funq.action('my_action')
+  save_action = self.funq.action(property_name='text',
+                                 property_value='Save')
 
 .. inheritance-diagram:: Action
 
@@ -43,6 +57,7 @@ A Widget is often obtained with :meth:`funq.client.FunqClient.widget` .
 Example::
 
   my_widget = self.funq.widget('my_widget')
+  ok_button = self.funq.widget(property_name='text', property_value='OK')
 
 .. inheritance-diagram:: Widget
 

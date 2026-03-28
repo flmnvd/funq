@@ -342,6 +342,51 @@ QtJson::JsonObject Player::list_commands(const QtJson::JsonObject &) {
     return result;
 }
 
+QtJson::JsonObject Player::object_find(const QtJson::JsonObject & command) {
+    QObject * object = 0;
+    QString path = command["path"].toString();
+    if (!path.isEmpty()) {
+        object = findObject(path);
+        if (!object) {
+            return createError(
+                "ObjectNotFound",
+                QString("Unable to find object with path `%1`").arg(path));
+        }
+    } else {
+        QString propertyName = command["property_name"].toString();
+        if (propertyName.isEmpty()) {
+            return createError(
+                "InvalidSearchCriteria",
+                "Either `path` or `property_name` must be defined.");
+        }
+
+        QList<QObject *> matches =
+            findObjectsByProperty(propertyName, command["property_value"],
+                                  command["class_name"].toString());
+        if (matches.count() > 1) {
+            return createError(
+                "AmbiguousObjectMatch",
+                QString("Multiple objects match property `%1` equal to `%2`")
+                    .arg(propertyName)
+                    .arg(command["property_value"].toString()));
+        }
+        if (matches.isEmpty()) {
+            return createError(
+                "ObjectNotFound",
+                QString("Unable to find object with property `%1` equal to `%2`")
+                    .arg(propertyName)
+                    .arg(command["property_value"].toString()));
+        }
+        object = matches.first();
+    }
+
+    qulonglong id = registerObject(object);
+    QtJson::JsonObject result;
+    result["oid"] = id;
+    dump_object(object, result);
+    return result;
+}
+
 QtJson::JsonObject Player::widget_by_path(const QtJson::JsonObject & command) {
     QString path = command["path"].toString();
     QObject * o = findObject(path);

@@ -37,6 +37,7 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 #include <QApplication>
 #include <QGraphicsItem>
 #include <QGraphicsView>
+#include <QSet>
 #include <QWidget>
 #include <QWindow>
 
@@ -138,6 +139,55 @@ QObject * ObjectPath::findObject(const QString & path) {
         }
     }
 
+    return 0;
+}
+
+QList<QObject *> ObjectPath::findObjectsByProperty(const QString & propertyName,
+                                                   const QVariant & propertyValue,
+                                                   const QString & className) {
+    if (propertyName.isEmpty()) {
+        return QList<QObject *>();
+    }
+
+    QList<QObject *> pending;
+    QList<QObject *> matches;
+    QSet<QObject *> visited;
+
+    Q_FOREACH (QWidget * widget, QApplication::topLevelWidgets()) {
+        pending << widget;
+    }
+    Q_FOREACH (QWindow * window, QApplication::topLevelWindows()) {
+        pending << window;
+    }
+
+    while (!pending.isEmpty()) {
+        QObject * current = pending.takeFirst();
+        if (!current || visited.contains(current)) {
+            continue;
+        }
+        visited.insert(current);
+
+        if ((className.isEmpty() || current->inherits(className.toUtf8())) &&
+            current->property(propertyName.toUtf8()) == propertyValue) {
+            matches << current;
+        }
+
+        Q_FOREACH (QObject * child, current->children()) {
+            pending << child;
+        }
+    }
+
+    return matches;
+}
+
+QObject * ObjectPath::findObjectByProperty(const QString & propertyName,
+                                           const QVariant & propertyValue,
+                                           const QString & className) {
+    QList<QObject *> matches =
+        findObjectsByProperty(propertyName, propertyValue, className);
+    if (matches.count() == 1) {
+        return matches.first();
+    }
     return 0;
 }
 

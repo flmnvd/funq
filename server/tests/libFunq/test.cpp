@@ -183,6 +183,34 @@ private slots:
 
         QCOMPARE(ObjectPath::findObject("QMainWindow:::_:NAMEd"), &obj2);
     }
+    void test_objectPath_findObjectByProperty() {
+        QMainWindow parent;
+        QPushButton btn1(&parent);
+        QPushButton btn2(&parent);
+
+        btn1.setText("Cancel");
+        btn2.setText("OK");
+
+        QCOMPARE(ObjectPath::findObjectByProperty("text", "OK"), &btn2);
+        QCOMPARE(ObjectPath::findObjectByProperty("text", "OK", "QPushButton"),
+                 &btn2);
+        QCOMPARE(ObjectPath::findObjectByProperty("text", "Missing"),
+                 (QObject *)NULL);
+    }
+    void test_objectPath_findObjectsByProperty() {
+        QMainWindow parent;
+        QPushButton btn1(&parent);
+        QPushButton btn2(&parent);
+
+        btn1.setText("OK");
+        btn2.setText("OK");
+
+        QList<QObject *> matches =
+            ObjectPath::findObjectsByProperty("text", "OK", "QPushButton");
+        QCOMPARE(matches.count(), 2);
+        QVERIFY(matches.contains(&btn1));
+        QVERIFY(matches.contains(&btn2));
+    }
     void test_objectpath_graphicsItemId() {
         QGraphicsView view;
         QGraphicsScene scene;
@@ -255,6 +283,85 @@ private slots:
 
         QCOMPARE(result["success"].toBool(), false);
         QCOMPARE(result["errName"].toString(), QString("InvalidWidgetPath"));
+    }
+
+    void test_player_object_find_by_path() {
+        QMainWindow w;
+        QObject o(&w);
+        o.setObjectName("target");
+
+        QBuffer buffer;
+        Player player(&buffer);
+
+        QtJson::JsonObject command;
+        command["path"] = "QMainWindow::target";
+
+        QtJson::JsonObject result = player.object_find(command);
+
+        QVERIFY(result["oid"].value<qulonglong>() != 0);
+        QCOMPARE(player.registeredObject(result["oid"].value<qulonglong>()),
+                 &o);
+    }
+
+    void test_player_object_find_by_property() {
+        QMainWindow w;
+        QPushButton btn1(&w);
+        QPushButton btn2(&w);
+        btn1.setText("Cancel");
+        btn2.setText("OK");
+
+        QBuffer buffer;
+        Player player(&buffer);
+
+        QtJson::JsonObject command;
+        command["property_name"] = "text";
+        command["property_value"] = "OK";
+        command["class_name"] = "QPushButton";
+
+        QtJson::JsonObject result = player.object_find(command);
+
+        QVERIFY(result["oid"].value<qulonglong>() != 0);
+        QCOMPARE(player.registeredObject(result["oid"].value<qulonglong>()),
+                 &btn2);
+    }
+
+    void test_player_object_find_missing_property() {
+        QMainWindow w;
+        QPushButton btn(&w);
+        btn.setText("OK");
+
+        QBuffer buffer;
+        Player player(&buffer);
+
+        QtJson::JsonObject command;
+        command["property_name"] = "text";
+        command["property_value"] = "Apply";
+
+        QtJson::JsonObject result = player.object_find(command);
+
+        QCOMPARE(result["success"].toBool(), false);
+        QCOMPARE(result["errName"].toString(), QString("ObjectNotFound"));
+    }
+    void test_player_object_find_ambiguous_property() {
+        QMainWindow w;
+        QPushButton btn1(&w);
+        QPushButton btn2(&w);
+        btn1.setText("OK");
+        btn2.setText("OK");
+
+        QBuffer buffer;
+        Player player(&buffer);
+
+        QtJson::JsonObject command;
+        command["property_name"] = "text";
+        command["property_value"] = "OK";
+        command["class_name"] = "QPushButton";
+
+        QtJson::JsonObject result = player.object_find(command);
+
+        QCOMPARE(result["success"].toBool(), false);
+        QCOMPARE(result["errName"].toString(),
+                 QString("AmbiguousObjectMatch"));
     }
 
     void test_player_object_properties() {

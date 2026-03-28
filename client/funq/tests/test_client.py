@@ -34,6 +34,7 @@
 
 from nose.tools import assert_equals, raises
 from funq import client
+from funq.errors import FunqError
 import os
 import subprocess
 
@@ -190,3 +191,74 @@ class TestApplicationContext:
         ctx = client.ApplicationContext(
             appconf, client_class=lambda *a, **kwa: None)
         assert_equals(ctx._process.command, ['funq', 'valgrind', 'command'])
+
+
+class TestFunqClientLookup:
+
+    def make_client(self):
+        funq = client.FunqClient.__new__(client.FunqClient)
+        funq.aliases = {}
+        return funq
+
+    def test_object_by_property(self):
+        funq = self.make_client()
+
+        def fake_send_command(action, **kwargs):
+            assert_equals(action, 'object_find')
+            assert_equals(kwargs['property_name'], 'text')
+            assert_equals(kwargs['property_value'], 'OK')
+            return {
+                'oid': 1,
+                'path': 'mainWindow::okButton',
+                'classes': ['QPushButton', 'QAbstractButton',
+                            'QWidget', 'QObject'],
+            }
+
+        funq.send_command = fake_send_command
+
+        obj = funq.object(property_name='text', property_value='OK',
+                          timeout=0.01, timeout_interval=0.01)
+        assert_equals(obj.path, 'mainWindow::okButton')
+
+    def test_widget_by_property(self):
+        funq = self.make_client()
+
+        def fake_find_object_data(**kwargs):
+            assert_equals(kwargs['property_name'], 'text')
+            assert_equals(kwargs['property_value'], 'Apply')
+            return {
+                'oid': 2,
+                'path': 'mainWindow::applyButton',
+                'classes': ['QPushButton', 'QAbstractButton',
+                            'QWidget', 'QObject'],
+            }
+
+        funq._find_object_data = fake_find_object_data
+
+        widget = funq.widget(property_name='text', property_value='Apply',
+                             wait_active=False)
+        assert_equals(widget.path, 'mainWindow::applyButton')
+
+    @raises(FunqError)
+    def test_widget_by_property_missing(self):
+        funq = self.make_client()
+
+        def fake_send_command(action, **kwargs):
+            raise FunqError('ObjectNotFound', 'missing')
+
+        funq.send_command = fake_send_command
+        funq.widget(property_name='text', property_value='Missing',
+                    timeout=0.01, timeout_interval=0.01,
+                    wait_active=False)
+
+    @raises(FunqError)
+    def test_widget_by_property_ambiguous(self):
+        funq = self.make_client()
+
+        def fake_send_command(action, **kwargs):
+            raise FunqError('AmbiguousObjectMatch', 'ambiguous')
+
+        funq.send_command = fake_send_command
+        funq.widget(property_name='text', property_value='OK',
+                    timeout=0.01, timeout_interval=0.01,
+                    wait_active=False)

@@ -37,6 +37,7 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 
 #include <QObject>
 #include <QString>
+#include <QVariant>
 
 class QGraphicsItem;
 class QGraphicsView;
@@ -47,6 +48,12 @@ namespace ObjectPath {
 QString objectPath(QObject * object);
 QString objectName(QObject * object);
 QObject * findObject(const QString & path);
+QObject * findObjectByProperty(const QString & propertyName,
+                               const QVariant & propertyValue,
+                               const QString & className = QString());
+QList<QObject *> findObjectsByProperty(const QString & propertyName,
+                                       const QVariant & propertyValue,
+                                       const QString & className = QString());
 
 #ifdef QT_QUICK_LIB
 QString quickItemPath(QQuickItem * item);

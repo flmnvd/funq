@@ -25,6 +25,8 @@ Example::
 
 .. autoclass:: FunqClient
 
+  .. automethod:: FunqClient.object
+
   .. automethod:: FunqClient.action
 
   .. automethod:: FunqClient.widget
