@@ -346,12 +346,18 @@ QtJson::JsonObject Player::object_find(const QtJson::JsonObject & command) {
     QObject * object = 0;
     QString path = command["path"].toString();
     if (!path.isEmpty()) {
-        object = findObject(path);
-        if (!object) {
+        QList<QObject *> matches = findObjects(path);
+        if (matches.count() > 1) {
+            return createError(
+                "AmbiguousObjectMatch",
+                QString("Multiple objects match path `%1`").arg(path));
+        }
+        if (matches.isEmpty()) {
             return createError(
                 "ObjectNotFound",
                 QString("Unable to find object with path `%1`").arg(path));
         }
+        object = matches.first();
     } else {
         QString propertyName = command["property_name"].toString();
         if (propertyName.isEmpty()) {
@@ -389,13 +395,19 @@ QtJson::JsonObject Player::object_find(const QtJson::JsonObject & command) {
 
 QtJson::JsonObject Player::widget_by_path(const QtJson::JsonObject & command) {
     QString path = command["path"].toString();
-    QObject * o = findObject(path);
-    qulonglong id = registerObject(o);
-    if (id == 0) {
+    QList<QObject *> matches = findObjects(path);
+    if (matches.count() > 1) {
+        return createError(
+            "AmbiguousObjectMatch",
+            QString("Multiple widgets match path `%1`").arg(path));
+    }
+    if (matches.isEmpty()) {
         return createError(
             "InvalidWidgetPath",
             QString("Unable to find widget with path `%1`").arg(path));
     }
+    QObject * o = matches.first();
+    qulonglong id = registerObject(o);
     QtJson::JsonObject result;
     result["oid"] = id;
     dump_object(o, result);

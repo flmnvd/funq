@@ -71,6 +71,47 @@ means:
 So ``:_:`` inside one path component means a literal ``::`` in the original
 QObject name, not another path level.
 
+Object path patterns
+--------------------
+
+Path-based lookup is not limited to full exact QObject paths. Funq also
+supports partial paths and wildcards.
+
+Examples::
+
+  # exact path
+  self.funq.widget(path='mainWindow::SettingsDialog')
+
+  # find by object name anywhere in the object tree
+  self.funq.widget(path='okButton')
+
+  # wildcard inside one path component
+  self.funq.widget(path='mainWindow::QLabel*')
+
+  # skip any number of intermediate parents
+  self.funq.widget(path='mainWindow::**::okButton')
+
+  # find a matching object anywhere
+  self.funq.object(path='**::statusLabel')
+
+Rules:
+
+* ``::`` separates QObject path components
+* ``*`` matches any characters inside one component
+* ``?`` matches one character inside one component
+* ``**`` matches zero or more whole path components
+
+This is useful when only part of the path is stable, or when you know the
+object name but do not want to encode every parent in the test.
+
+Path-based lookup must still identify exactly one object:
+
+* no widget match: ``InvalidWidgetPath`` for ``widget(...)``
+* no object match: ``ObjectNotFound`` for ``object(...)``
+* more than one path match: ``AmbiguousObjectMatch``
+
+In all these cases, Funq raises an exception and the test fails.
+
 Xml dump of all widgets
 -----------------------
 

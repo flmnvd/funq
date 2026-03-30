@@ -37,6 +37,7 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 #include <QApplication>
 #include <QGraphicsItem>
 #include <QGraphicsView>
+#include <QRegExp>
 #include <QSet>
 #include <QWidget>
 #include <QWindow>
@@ -104,41 +105,100 @@ QString ObjectPath::objectName(QObject * object) {
     return name;
 }
 
-QObject * ObjectPath::findObject(const QString & path) {
+namespace {
+QList<QObject *> topLevelObjects() {
+    QList<QObject *> objects;
+    Q_FOREACH (QWidget * widget, QApplication::topLevelWidgets()) {
+        objects << widget;
+    }
+    Q_FOREACH (QWindow * window, QApplication::topLevelWindows()) {
+        objects << window;
+    }
+    return objects;
+}
+
+bool matchesPathPart(const QString & pattern, const QString & value) {
+    if (pattern == "**") {
+        return true;
+    }
+    QRegExp regexp(pattern, Qt::CaseSensitive, QRegExp::Wildcard);
+    return regexp.exactMatch(value);
+}
+
+void collectObjectsByName(QObject * object, const QString & pattern,
+                          QList<QObject *> & matches,
+                          QSet<QObject *> & visited) {
+    if (!object || visited.contains(object)) {
+        return;
+    }
+    visited.insert(object);
+
+    if (matchesPathPart(pattern, ObjectPath::objectName(object))) {
+        matches << object;
+    }
+
+    Q_FOREACH (QObject * child, object->children()) {
+        collectObjectsByName(child, pattern, matches, visited);
+    }
+}
+
+void collectObjectsByPath(QObject * object, const QStringList & parts, int index,
+                          QList<QObject *> & matches) {
+    if (!object || index >= parts.count()) {
+        return;
+    }
+
+    const QString & part = parts.at(index);
+    if (part == "**") {
+        collectObjectsByPath(object, parts, index + 1, matches);
+        Q_FOREACH (QObject * child, object->children()) {
+            collectObjectsByPath(child, parts, index, matches);
+        }
+        return;
+    }
+
+    if (!matchesPathPart(part, ObjectPath::objectName(object))) {
+        return;
+    }
+
+    if (index == parts.count() - 1) {
+        matches << object;
+        return;
+    }
+
+    Q_FOREACH (QObject * child, object->children()) {
+        collectObjectsByPath(child, parts, index + 1, matches);
+    }
+}
+}
+
+QList<QObject *> ObjectPath::findObjects(const QString & path) {
     const QString separator("::");
     QStringList parts = path.split(separator);
     if (parts.isEmpty()) {
-        return 0;
+        return QList<QObject *>();
     }
-    const QString name = parts.takeLast();
-    QObject * parent = 0;
-    if (parts.isEmpty()) {
-        // Top level widget
-        Q_FOREACH (QWidget * widget, QApplication::topLevelWidgets()) {
-            if (objectName(widget) == name) {
-                return widget;
-            }
+
+    QList<QObject *> matches;
+    if (parts.count() == 1) {
+        QSet<QObject *> visited;
+        Q_FOREACH (QObject * object, topLevelObjects()) {
+            collectObjectsByName(object, parts.first(), matches, visited);
         }
-        // did not find any ? - let's try on windows (qtquick)
-        Q_FOREACH (QWindow * window, QApplication::topLevelWindows()) {
-            if (objectName(window) == name) {
-                return window;
-            }
-        }
-        return 0;
     } else {
-        parent = findObject(parts.join(separator));
-        if (!parent) {
-            return 0;
+        Q_FOREACH (QObject * object, topLevelObjects()) {
+            collectObjectsByPath(object, parts, 0, matches);
         }
     }
 
-    Q_FOREACH (QObject * child, parent->children()) {
-        if (objectName(child) == name) {
-            return child;
-        }
-    }
+    return matches;
+}
 
+QObject * ObjectPath::findObject(const QString & path) {
+    QList<QObject *> matches = findObjects(path);
+    if (matches.count() == 1) {
+        return matches.first();
+    }
     return 0;
 }
 

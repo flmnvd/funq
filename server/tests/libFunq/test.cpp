@@ -183,6 +183,44 @@ private slots:
 
         QCOMPARE(ObjectPath::findObject("QMainWindow:::_:NAMEd"), &obj2);
     }
+    void test_objectPath_findObject_by_single_name_anywhere() {
+        QMainWindow parent;
+        QWidget container(&parent);
+        QObject target(&container);
+        target.setObjectName("deepObject");
+
+        QCOMPARE(ObjectPath::findObject("deepObject"), &target);
+    }
+    void test_objectPath_findObject_by_wildcard_name_anywhere() {
+        QMainWindow parent;
+        QWidget container(&parent);
+        QObject target(&container);
+        target.setObjectName("deepObject");
+
+        QCOMPARE(ObjectPath::findObject("deep*"), &target);
+    }
+    void test_objectPath_findObject_by_double_star_path() {
+        QMainWindow parent;
+        QWidget container(&parent);
+        QObject target(&container);
+        target.setObjectName("deepObject");
+
+        QCOMPARE(ObjectPath::findObject("QMainWindow::**::deepObject"), &target);
+    }
+    void test_objectPath_findObjects_ambiguous_by_name() {
+        QMainWindow parent;
+        QWidget c1(&parent);
+        QWidget c2(&parent);
+        QObject target1(&c1);
+        QObject target2(&c2);
+        target1.setObjectName("dup");
+        target2.setObjectName("dup");
+
+        QList<QObject *> matches = ObjectPath::findObjects("dup");
+        QCOMPARE(matches.count(), 2);
+        QVERIFY(matches.contains(&target1));
+        QVERIFY(matches.contains(&target2));
+    }
     void test_objectPath_findObjectByProperty() {
         QMainWindow parent;
         QPushButton btn1(&parent);
@@ -284,6 +322,25 @@ private slots:
         QCOMPARE(result["success"].toBool(), false);
         QCOMPARE(result["errName"].toString(), QString("InvalidWidgetPath"));
     }
+    void test_player_widget_by_path_ambiguous() {
+        QMainWindow w;
+        QPushButton btn1(&w);
+        QPushButton btn2(&w);
+        btn1.setObjectName("dup");
+        btn2.setObjectName("dup");
+
+        QBuffer buffer;
+        Player player(&buffer);
+
+        QtJson::JsonObject command;
+        command["path"] = "dup";
+
+        QtJson::JsonObject result = player.widget_by_path(command);
+
+        QCOMPARE(result["success"].toBool(), false);
+        QCOMPARE(result["errName"].toString(),
+                 QString("AmbiguousObjectMatch"));
+    }
 
     void test_player_object_find_by_path() {
         QMainWindow w;
@@ -295,6 +352,24 @@ private slots:
 
         QtJson::JsonObject command;
         command["path"] = "QMainWindow::target";
+
+        QtJson::JsonObject result = player.object_find(command);
+
+        QVERIFY(result["oid"].value<qulonglong>() != 0);
+        QCOMPARE(player.registeredObject(result["oid"].value<qulonglong>()),
+                 &o);
+    }
+    void test_player_object_find_by_partial_path() {
+        QMainWindow w;
+        QWidget container(&w);
+        QObject o(&container);
+        o.setObjectName("target");
+
+        QBuffer buffer;
+        Player player(&buffer);
+
+        QtJson::JsonObject command;
+        command["path"] = "QMainWindow::**::target";
 
         QtJson::JsonObject result = player.object_find(command);
 

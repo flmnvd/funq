@@ -48,6 +48,7 @@ namespace ObjectPath {
 QString objectPath(QObject * object);
 QString objectName(QObject * object);
 QObject * findObject(const QString & path);
+QList<QObject *> findObjects(const QString & path);
 QObject * findObjectByProperty(const QString & propertyName,
                                const QVariant & propertyValue,
                                const QString & className = QString());
