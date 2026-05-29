@@ -40,7 +40,9 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 #include <QRegExp>
 #include <QSet>
 #include <QWidget>
+#if QT_VERSION >= 0x050000
 #include <QWindow>
+#endif
 
 #ifdef QT_QUICK_LIB
 #include <QQmlContext>
@@ -111,9 +113,11 @@ QList<QObject *> topLevelObjects() {
     Q_FOREACH (QWidget * widget, QApplication::topLevelWidgets()) {
         objects << widget;
     }
+#if QT_VERSION >= 0x050000
     Q_FOREACH (QWindow * window, QApplication::topLevelWindows()) {
         objects << window;
     }
+#endif
     return objects;
 }
 
@@ -216,9 +220,11 @@ QList<QObject *> ObjectPath::findObjectsByProperty(const QString & propertyName,
     Q_FOREACH (QWidget * widget, QApplication::topLevelWidgets()) {
         pending << widget;
     }
+#if QT_VERSION >= 0x050000
     Q_FOREACH (QWindow * window, QApplication::topLevelWindows()) {
         pending << window;
     }
+#endif
 
     while (!pending.isEmpty()) {
         QObject * current = pending.takeFirst();

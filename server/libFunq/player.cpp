@@ -58,8 +58,11 @@ knowledge of the CeCILL v2.1 license and that you accept its terms.
 #include <QTimer>
 #include <QTreeView>
 #include <QWidget>
+
+#if QT_VERSION >= 0x050000
 #include <QGuiApplication>
 #include <QWindow>
+#endif
 
 #if QT_VERSION_MAJOR >= 6
 #include <QScreen>
@@ -457,24 +460,30 @@ QtJson::JsonObject Player::active_widget(const QtJson::JsonObject & command) {
     QString type = command["type"].toString();
     if (type == "modal") {
         active = QApplication::activeModalWidget();
+#if QT_VERSION >= 0x050000
         if (!active) {
             active = QApplication::modalWindow();
         }
+#endif
     } else if (type == "popup") {
         active = QApplication::activePopupWidget();
     } else if (type == "focus") {
         active = QApplication::focusWidget();
+#if QT_VERSION >= 0x050000
         if (!active) {
             active = QApplication::focusWindow();
         }
+#endif
     } else {
         active = QApplication::activeWindow();
+#if QT_VERSION >= 0x050000
         if (!active) {
             QWindowList lst = QGuiApplication::topLevelWindows();
             if (!lst.isEmpty()) {
                 active = lst.first();
             }
         }
+#endif
     }
     if (!active) {
         return createError(
@@ -594,11 +603,13 @@ QtJson::JsonObject Player::widgets_list(const QtJson::JsonObject & command) {
         } else {
             // no qwidgets, this is probably a qtquick app - anyway, check for
             // windows
+#if QT_VERSION >= 0x050000
             foreach (QWindow * window, QApplication::topLevelWindows()) {
                 QtJson::JsonObject resultWindow;
                 dump_object(window, resultWindow, with_properties);
                 result[resultWindow["path"].toString()] = resultWindow;
             }
+#endif
         }
     }
     return result;
