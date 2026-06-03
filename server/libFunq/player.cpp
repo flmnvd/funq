@@ -85,6 +85,30 @@ QString metaMethodSignature(const QMetaMethod & method) {
     return QString::fromLatin1(method.signature());
 #endif
 }
+
+QWidget * findTopLevelWindowFallback() {
+    QWidget * firstWindow = 0;
+    foreach (QWidget * widget, QApplication::topLevelWidgets()) {
+        if (!widget || !widget->isWindow()) {
+            continue;
+        }
+
+        Qt::WindowType type = static_cast<Qt::WindowType>(
+            widget->windowType() & Qt::WindowType_Mask);
+        if (type == Qt::Popup || type == Qt::ToolTip) {
+            continue;
+        }
+
+        if (widget->isVisible()) {
+            return widget;
+        }
+
+        if (!firstWindow) {
+            firstWindow = widget;
+        }
+    }
+    return firstWindow;
+}
 }
 
 template <class T>
@@ -476,14 +500,16 @@ QtJson::JsonObject Player::active_widget(const QtJson::JsonObject & command) {
 #endif
     } else {
         active = QApplication::activeWindow();
-#if QT_VERSION >= 0x050000
         if (!active) {
+#if QT_VERSION >= 0x050000
             QWindowList lst = QGuiApplication::topLevelWindows();
             if (!lst.isEmpty()) {
                 active = lst.first();
             }
-        }
+#else
+            active = findTopLevelWindowFallback();
 #endif
+        }
     }
     if (!active) {
         return createError(
