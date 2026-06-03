@@ -63,6 +63,7 @@ QQuickItem * findQuickItemById(QQuickItem * root, const QString & qid);
 #endif
 
 qulonglong graphicsItemId(QGraphicsItem * item);
+QObject * graphicsItemObject(QGraphicsItem * item);
 QGraphicsItem * graphicsItemFromId(QGraphicsView * view, const qulonglong & id);
 }  // namespace ObjectPath
 

@@ -261,6 +261,20 @@ qulonglong ObjectPath::graphicsItemId(QGraphicsItem * item) {
     return (qulonglong)item;
 }
 
+QObject * ObjectPath::graphicsItemObject(QGraphicsItem * item) {
+    if (!item) {
+        return 0;
+    }
+
+#if defined(__cpp_rtti) || defined(_CPPRTTI) || defined(__GXX_RTTI)
+    if (QObject * object = dynamic_cast<QObject *>(item)) {
+        return object;
+    }
+#endif
+
+    return item->toGraphicsObject();
+}
+
 QGraphicsItem * ObjectPath::graphicsItemFromId(QGraphicsView * view,
                                                const qulonglong & id) {
     foreach (QGraphicsItem * item, view->items()) {

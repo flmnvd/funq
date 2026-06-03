@@ -265,7 +265,7 @@ void dump_graphics_items(const QList<QGraphicsItem *> & items,
         QtJson::JsonObject outitem;
         outitem["gid"] = graphicsItemId(item);
         outitem["viewid"] = viewid;
-        QObject * itemObject = dynamic_cast<QObject *>(item);
+        QObject * itemObject = graphicsItemObject(item);
         if (itemObject) {
             const QMetaObject * mo = itemObject->metaObject();
             QStringList classes;
@@ -308,10 +308,10 @@ public:
         stream << path << '\n';
         write_object_props(object, stream);
 
-        QGraphicsView * view = dynamic_cast<QGraphicsView *>(object->parent());
+        QGraphicsView * view = qobject_cast<QGraphicsView *>(object->parent());
         if (view) {
             QGraphicsItem * item = view->itemAt(pos);
-            QObject * qitem = dynamic_cast<QObject *>(item);
+            QObject * qitem = graphicsItemObject(item);
             if (item) {
                 stream << "GITEM: `" << ObjectPath::graphicsItemId(item)
                        << "` (QObject: " << (qitem != 0) << ")" << '\n';
@@ -1283,7 +1283,7 @@ QtJson::JsonObject Player::gitem_properties(
                 .arg(gid)
                 .arg(ctx.id));
     }
-    QObject * object = dynamic_cast<QObject *>(item);
+    QObject * object = graphicsItemObject(item);
     if (!object) {
         return createError(
             "GItemNotQObject",
