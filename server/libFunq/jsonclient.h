@@ -54,6 +54,11 @@ public:
 
     Protocole * protocole() { return m_protocole; }
 
+protected:
+    virtual QByteArray serializeCommandResponse(const QString & action,
+                                                const QtJson::JsonObject & result,
+                                                bool & success);
+
 signals:
 
 private slots:

@@ -108,9 +108,31 @@ QString ObjectPath::objectName(QObject * object) {
 }
 
 namespace {
+QWidgetList widgetTreeRoots() {
+    QWidgetList roots;
+    QSet<QWidget *> allWidgets;
+    Q_FOREACH (QWidget * widget, QApplication::allWidgets()) {
+        if (widget) {
+            allWidgets.insert(widget);
+        }
+    }
+
+    Q_FOREACH (QWidget * widget, allWidgets) {
+        QWidget * parent = widget->parentWidget();
+        while (parent && !allWidgets.contains(parent)) {
+            parent = parent->parentWidget();
+        }
+        if (!parent) {
+            roots << widget;
+        }
+    }
+
+    return roots;
+}
+
 QList<QObject *> topLevelObjects() {
     QList<QObject *> objects;
-    Q_FOREACH (QWidget * widget, QApplication::topLevelWidgets()) {
+    Q_FOREACH (QWidget * widget, widgetTreeRoots()) {
         objects << widget;
     }
 #if QT_VERSION >= 0x050000
@@ -217,7 +239,7 @@ QList<QObject *> ObjectPath::findObjectsByProperty(const QString & propertyName,
     QList<QObject *> matches;
     QSet<QObject *> visited;
 
-    Q_FOREACH (QWidget * widget, QApplication::topLevelWidgets()) {
+    Q_FOREACH (QWidget * widget, widgetTreeRoots()) {
         pending << widget;
     }
 #if QT_VERSION >= 0x050000

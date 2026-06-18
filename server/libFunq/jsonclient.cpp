@@ -61,6 +61,19 @@ JsonClient::~JsonClient() {
     delete m_protocole;
 }
 
+QByteArray JsonClient::serializeCommandResponse(const QString &,
+                                               const QtJson::JsonObject & result,
+                                               bool & success) {
+    if (result.contains("success") && !result["success"].toBool()) {
+        success = true;
+        return QByteArray("{ \"success\" : false, \"errName\" : ") +
+               QtJson::serialize(result["errName"].toString()) +
+               QByteArray(", \"errDesc\" : ") +
+               QtJson::serialize(result["errDesc"].toString()) + QByteArray(" }");
+    }
+    return QtJson::serialize(result, success);
+}
+
 void JsonClient::onMessageReceived() {
     QByteArray data = m_protocole->nextAvailableMessage();
     bool success = false;
@@ -102,33 +115,12 @@ void JsonClient::onMessageReceived() {
     bool is_delayed_call =
         !(strcmp(method.typeName(), "QtJson::JsonObject") == 0);
 
-    if (!is_delayed_call) {
-        QtJson::JsonObject result;
-        success = method.invoke(this, Qt::DirectConnection,
-                                Q_RETURN_ARG(QtJson::JsonObject, result),
-                                Q_ARG(QtJson::JsonObject, command));
-        if (!success) {
-            qDebug() << "error while executing action" << action;
-            m_protocole->close();
-            return;
-        }
-
-        // serialize response
-        QByteArray response = QtJson::serialize(result, success);
-
-        if (!success) {
-            qDebug() << "unable to serialize result to json" << action;
-            m_protocole->close();
-            return;
-        }
-
-        m_protocole->sendMessage(response);
-    } else {
-        DelayedResponse * dresponse;
+    if (is_delayed_call) {
+        DelayedResponse * dresponse = 0;
         success = method.invoke(this, Qt::DirectConnection,
                                 Q_RETURN_ARG(DelayedResponse *, dresponse),
                                 Q_ARG(QtJson::JsonObject, command));
-        if (!success && dresponse) {
+        if (!success || !dresponse) {
             qDebug() << "error while executing action" << action;
             m_protocole->close();
             return;
@@ -137,7 +129,28 @@ void JsonClient::onMessageReceived() {
                 SIGNAL(aboutToWriteResponse(const QtJson::JsonObject &)),
                 dresponse, SLOT(deleteLater()));
         dresponse->start();
+        return;
     }
+
+    QtJson::JsonObject result;
+    success = method.invoke(this, Qt::DirectConnection,
+                            Q_RETURN_ARG(QtJson::JsonObject, result),
+                            Q_ARG(QtJson::JsonObject, command));
+    if (!success) {
+        qDebug() << "error while executing action" << action;
+        m_protocole->close();
+        return;
+    }
+
+    QByteArray response = serializeCommandResponse(action, result, success);
+
+    if (!success) {
+        qDebug() << "unable to serialize result to json" << action;
+        m_protocole->close();
+        return;
+    }
+
+    m_protocole->sendMessage(response);
 }
 
 QtJson::JsonObject JsonClient::createError(const QString & name,

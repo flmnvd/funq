@@ -101,8 +101,15 @@ QByteArray serialize(const QVariant & data, bool & success) {
 
     if (!data.isValid()) {  // invalid or null?
         str = "null";
-    } else if ((data.type() == QVariant::List) ||
-               (data.type() == QVariant::StringList)) {  // variant is a list?
+    } else if (data.type() == QVariant::StringList) {
+        QList<QByteArray> values;
+        const QStringList list = data.toStringList();
+        Q_FOREACH (const QString & v, list) {
+            values << sanitizeString(v).toUtf8();
+        }
+
+        str = "[ " + join(values, ", ") + " ]";
+    } else if (data.type() == QVariant::List) {  // variant is a list?
         QList<QByteArray> values;
         const QVariantList list = data.toList();
         Q_FOREACH (const QVariant & v, list) {

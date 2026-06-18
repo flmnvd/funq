@@ -62,6 +62,11 @@ public:
     QObject * registeredObject(const qulonglong & id);
     void sendPickMessage(const QString & text);
 
+protected:
+    QByteArray serializeCommandResponse(const QString & action,
+                                        const QtJson::JsonObject & result,
+                                        bool & success);
+
 public slots:
     /*
      * These slots are automatically transformed into available commands
