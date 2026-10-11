@@ -1,0 +1,7 @@
+# Merge this table into your Codex config.toml after creating .venv.
+[mcp_servers.funq]
+command = 'Z:\rapps3\Tests\funq\mcp\.venv\Scripts\python.exe'
+args = ['-B', 'Z:\rapps3\Tests\funq\mcp\run_server.py']
+cwd = 'Z:\rapps3\Tests\funq\mcp'
+startup_timeout_sec = 15
+tool_timeout_sec = 60

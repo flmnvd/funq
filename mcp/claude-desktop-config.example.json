@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "funq": {
+      "command": "Z:\\rapps3\\Tests\\funq\\mcp\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-B",
+        "Z:\\rapps3\\Tests\\funq\\mcp\\run_server.py",
+        "--funq-root",
+        "Z:\\rapps3\\Tests\\funq",
+        "--artifact-dir",
+        "Z:\\rapps3\\Tests\\funq\\mcp\\artifacts"
+      ]
+    }
+  }
+}
