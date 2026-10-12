@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- `model_items` no longer walks a model without a bound. A model that reports
+  children for an index leading back into the tree could exhaust the stack and
+  crash the application under test instead of returning an error. The walk now
+  stops after 64 levels; `max_depth` and `max_items` override the bounds, and a
+  dump stopped by either one is reported with `truncated`.
 
 ## [1.2.0] - 2019-08-12
 ### Added

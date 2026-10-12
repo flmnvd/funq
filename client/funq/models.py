@@ -69,6 +69,10 @@ class TreeItems(BaseItems, item_class=TreeItem):
     """
     Abstract class to manipulate data that contains :class:`TreeItem`. Used
     by modelitems and graphicsitems.
+
+    :var truncated: True when the server stopped the walk on one of its
+                    bounds, so the items are only part of the model. Absent
+                    when the dump is complete.
     """
 
     def __init__(self, client, data):
@@ -76,6 +80,9 @@ class TreeItems(BaseItems, item_class=TreeItem):
         Allow to create an instance of the class given some data coming from
         decoded json.
         """
+        for k, v in data.items():
+            if k != 'items':
+                setattr(self, k, v)
         self.client = client
         self.items = [self._item_class(client, v) for v in data['items']]
 

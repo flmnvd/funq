@@ -220,17 +220,49 @@ void dump_item_model_attrs(QAbstractItemModel * model, QtJson::JsonObject & out,
     }
 }
 
+static const int DEFAULT_MODEL_MAX_DEPTH = 64;
+
+struct ModelDumpBudget {
+    ModelDumpBudget(int depthLimit, int itemLimit)
+        : maxDepth(depthLimit), maxItems(itemLimit), items(0),
+          truncated(false) {}
+
+    bool depthExhausted(int depth) const {
+        return maxDepth >= 0 && depth >= maxDepth;
+    }
+
+    bool itemsExhausted() const { return maxItems >= 0 && items >= maxItems; }
+
+    int maxDepth;
+    int maxItems;
+    int items;
+    bool truncated;
+};
+
 void dump_items_model(QAbstractItemModel * model, QtJson::JsonObject & out,
                       const QModelIndex & parent, const qulonglong & modelId,
-                      bool recursive = true) {
+                      bool recursive, ModelDumpBudget & budget, int depth) {
     QtJson::JsonArray items;
     for (int i = 0; i < model->rowCount(parent); ++i) {
         for (int j = 0; j < model->columnCount(parent); ++j) {
+            if (budget.itemsExhausted()) {
+                budget.truncated = true;
+                out["truncated"] = true;
+                out["items"] = items;
+                return;
+            }
             QModelIndex index = model->index(i, j, parent);
             QtJson::JsonObject item;
             dump_item_model_attrs(model, item, index, modelId);
+            budget.items++;
             if (j == 0 && recursive && model->hasChildren(index)) {
-                dump_items_model(model, item, index, modelId);
+                if (budget.depthExhausted(depth + 1)) {
+                    budget.truncated = true;
+                    item["truncated"] = true;
+                } else {
+                    dump_items_model(model, item, index, modelId, recursive,
+                                     budget, depth + 1);
+                }
             }
             items << item;
         }
@@ -912,7 +944,16 @@ QtJson::JsonObject Player::model_items(const QtJson::JsonObject & command) {
     QtJson::JsonObject result;
     bool recursive = !(ctx.obj->inherits("QAbstractTableModel") ||
                        ctx.obj->inherits("QAbstractListModel"));
-    dump_items_model(model, result, QModelIndex(), ctx.id, recursive);
+    int maxDepth = command.contains("max_depth") ? command["max_depth"].toInt()
+                                                 : DEFAULT_MODEL_MAX_DEPTH;
+    int maxItems =
+        command.contains("max_items") ? command["max_items"].toInt() : -1;
+    ModelDumpBudget budget(maxDepth, maxItems);
+    dump_items_model(model, result, QModelIndex(), ctx.id, recursive, budget,
+                     0);
+    if (budget.truncated) {
+        result["truncated"] = true;
+    }
     return result;
 }
 
