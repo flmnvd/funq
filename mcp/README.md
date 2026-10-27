@@ -4,9 +4,10 @@ A local stdio MCP server for inspecting and exercising an already running
 Funq-enabled Qt application. It uses the Python client in `../client`; the Qt
 plugin and the application do not need MCP-specific changes.
 
-The same server supports Codex, Claude Desktop, and Claude Code through standard
-MCP over stdio. All 16 tools, error results, and native PNG screenshots are
-available to each client. No provider API key is required by this server.
+The same server supports Codex, Claude Desktop, Claude Code, and DeepSeek
+Harness through standard MCP over stdio. All 16 tools, error results, and native
+PNG screenshots are available to each client. No provider API key is required by
+this server.
 
 ## Setup
 
@@ -91,6 +92,60 @@ connection. These examples do not change your Claude configuration automatically
 See [Claude Code's MCP documentation](https://code.claude.com/docs/en/mcp)
 for scopes and configuration details.
 
+## Connect DeepSeek Harness
+
+DSH (DeepSeek Harness) uses its bundled MCP client plugin,
+`@deepseek-ai/dsh-mcp-client`. MCP servers are not configured in a separate JSON
+file: each server is a row in the active profile's `cordis.patch.yml`, next to
+the harness's other plugin settings.
+
+Find the profile directory first. The desktop app uses
+`%USERPROFILE%\.dsh\profiles\<profile>\` (the name is in `DSH_PROFILE`; the
+shipped desktop profile is `desktop`). Append this block to that profile's
+`cordis.patch.yml`:
+
+```yaml
+- insert:
+    - id: mcp-funq
+      name: "@deepseek-ai/dsh-mcp-client"
+      config:
+        serverName: funq
+        transport: stdio
+        command: 'Z:\rapps3\Tests\funq\mcp\.venv\Scripts\python.exe'
+        args:
+          - '-B'
+          - 'Z:\rapps3\Tests\funq\mcp\run_server.py'
+          - '--funq-root'
+          - 'Z:\rapps3\Tests\funq'
+          - '--artifact-dir'
+          - 'Z:\rapps3\Tests\funq\mcp\artifacts'
+        cwd: 'Z:\rapps3\Tests\funq\mcp'
+        toolCallTimeoutMs: 60000
+```
+
+Use the `insert:` form for a new row; a bare `- id:` entry only overrides a row
+that a bundle already defines. Single-quoted YAML keeps Windows backslashes
+literal. Adjust the paths for another checkout or platform; on macOS/Linux use
+the virtual environment's `bin/python`.
+
+Save the file. Profiles with HMR enabled — including the shipped web and desktop
+compositions — reload the patch and start the server immediately; otherwise
+restart DSH. The tools then appear as `mcp__funq__funq_attach`,
+`mcp__funq__funq_snapshot`, and so on, and the server's instructions are added to
+the harness prompt. Remove the inserted block (or set `disabled: true` on the
+row) to unload the server the same way.
+
+Notes:
+
+- `serverName` becomes the tool namespace and must match
+  `[A-Za-z0-9_-]{1,32}`; keep `funq`.
+- DSH scrubs ambient `*KEY*`, `*PASSWORD*`, `*SECRET*`, `*TOKEN*`, and `DSH_*`
+  variables from stdio children; this server needs none of them.
+- The plugin ships with current DSH builds. If DSH reports that the package
+  cannot be resolved, the build predates the bundled MCP client; update DSH.
+- The profile entry is global to that profile, not per project. Its 16 tool
+  schemas and the server instructions are sent with every request.
+
 ## Start a GUI test
 
 Start one Funq-enabled application using its normal test launch procedure and
@@ -100,7 +155,7 @@ the application nor calls Funq's `quit` command. `funq_detach` closes only the
 test socket. Match the Funq plugin to the application's Qt version, bitness,
 compiler/runtime, and Debug/Release build as required by the existing setup.
 
-Suggested first request to Codex or Claude:
+Suggested first request to Codex, Claude, or DeepSeek Harness:
 
 > Use Funq on the explicit port 52777. Attach with expected_class CMainWindow,
 > inspect visible widgets, and capture a screenshot. Report any startup dialog
@@ -236,6 +291,11 @@ Claude Code 2.1.117 also connected successfully using the supplied `.mcp.json`
 entry and `claude mcp get funq` in an isolated temporary project. This checks the
 host connection without a model request. The Claude Desktop application itself
 has not been exercised by these checks.
+
+DeepSeek Harness 0.2.1-rc.3 connected successfully through the profile entry
+above: the server hot-reloaded as `mcp__funq__*` tools, `mcp__funq__funq_sessions`
+returned `{"ok": true, "data": []}`, and a live R-Studio build was driven through
+attach, dialog click, snapshot, and native PNG screenshot.
 
 Set `FUNQ_ROOT` when running tests outside the Funq checkout. Live application
 validation remains a separate step requiring a running Funq-enabled application
